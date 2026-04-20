@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WCAG 2.2 Quiz Game</title>
+  <style>
+    /* ─── CSS Custom Properties ───────────────────────────────── */
+    :root {
+      --primary:       #7c6fff;
+      --primary-dark:  #5f52e0;
+      --primary-glow:  rgba(124, 111, 255, 0.35);
+      --success:       #2fcf7a;
+      --success-bg:    rgba(47, 207, 122, 0.12);
+      --success-border:rgba(47, 207, 122, 0.45);
+      --error:         #f25c5c;
+      --error-bg:      rgba(242, 92, 92, 0.12);
+      --error-border:  rgba(242, 92, 92, 0.45);
+      --bg:            #0d0d14;
+      --card:          #14141f;
+      --card-hover:    #1a1a2a;
+      --border:        rgba(255,255,255,0.08);
+      --border-hover:  rgba(124,111,255,0.5);
+      --text:          #f0eeff;
+      --text-muted:    #8b89a8;
+      --text-dim:      #4a4870;
+      --radius:        14px;
+      --ease:          cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ─── Reset & Base ────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 16px; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 15% 40%, rgba(124,111,255,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 85% 20%, rgba(242,92,92,0.07) 0%, transparent 55%);
+    }
+
+    /* ─── Accessible Focus Styles (WCAG 2.4.7) ───────────────── */
+    :focus-visible {
+      outline: 3px solid var(--primary);
+      outline-offset: 3px;
+      border-radius: 8px;
+    }
+
+    /* ─── Screen System ───────────────────────────────────────── */
+    .screen {
+      width: 100%;
+      max-width: 720px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+      animation: screenIn 0.4s var(--ease) both;
+    }
+    .screen.active { display: flex; }
+
+    @keyframes screenIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Screen-reader Only ─────────────────────────────────── */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0;
+      margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
+      white-space: nowrap; border: 0;
+    }
+
+    /* ─── Card ────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      width: 100%;
+    }
+
+    /* ─── Hero Header ─────────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 0.5rem 0;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--primary);
+      background: rgba(124,111,255,0.12);
+      border: 1px solid rgba(124,111,255,0.3);
+      border-radius: 99px;
+      padding: 0.3rem 0.85rem;
+      margin-bottom: 0.85rem;
+    }
+    .hero-title {
+      font-size: clamp(1.8rem, 6vw, 2.8rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #c4b8ff 0%, #7c6fff 45%, #f25c9a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+    }
+    .hero-sub {
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-top: 0.45rem;
+    }
+
+    /* ─── Instructions Banner ─────────────────────────────────── */
+    .instructions {
+      background: rgba(124,111,255,0.07);
+      border: 1px solid rgba(124,111,255,0.2);
+      border-radius: 10px;
+      padding: 0.9rem 1.2rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      width: 100%;
+    }
+    .instructions strong { color: var(--text); }
+
+    /* ─── Mode Cards ──────────────────────────────────────────── */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.9rem;
+      width: 100%;
+    }
+    @media (max-width: 480px) { .mode-grid { grid-template-columns: 1fr; } }
+
+    .mode-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.6rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.65rem;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text);
+      font-family: inherit;
+      font-size: inherit;
+      transition: border-color 0.25s var(--ease), background 0.25s var(--ease), transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+    }
+    .mode-card:hover, .mode-card:focus-visible {
+      border-color: var(--primary);
+      background: var(--card-hover);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px var(--primary-glow);
+    }
+    .mode-icon {
+      font-size: 2.2rem;
+      line-height: 1;
+    }
+    .mode-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .mode-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+    .mode-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--primary);
+      background: rgba(124,111,255,0.13);
+      border: 1px solid rgba(124,111,255,0.3);
+      border-radius: 99px;
+      padding: 0.2rem 0.65rem;
+    }
+
+    /* ─── Question Count Picker ───────────────────────────────── */
+    .count-fieldset {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      background: var(--card);
+      width: 100%;
+    }
+    .count-legend {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 0 0.4rem;
+    }
+    .count-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.6rem;
+    }
+    .count-btn {
+      background: var(--card-hover);
+      border: 2px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 0.35rem 1rem;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s var(--ease);
+    }
+    .count-btn:hover { border-color: var(--primary); color: var(--text); }
+    .count-btn[aria-pressed="true"] {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(124,111,255,0.12);
+    }
+
+    /* ─── Quiz Top Bar ────────────────────────────────────────── */
+    .quiz-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .mode-chip {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 0.3rem 0.85rem;
+    }
+    .score-chip {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--text);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 0.3rem 0.85rem;
+    }
+    .score-chip .val { color: var(--primary); }
+
+    /* ─── Streak Badge ────────────────────────────────────────── */
+    .streak-chip {
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: rgba(255,179,41,0.12);
+      border: 1px solid rgba(255,179,41,0.35);
+      color: #ffb329;
+      border-radius: 99px;
+      padding: 0.3rem 0.85rem;
+      display: none;
+    }
+    .streak-chip.visible { display: inline-block; }
+
+    /* ─── Progress Bar ────────────────────────────────────────── */
+    .progress-wrap { width: 100%; }
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+    .progress-track {
+      height: 7px;
+      background: var(--card);
+      border-radius: 99px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #f25c9a);
+      border-radius: 99px;
+      transition: width 0.55s var(--ease);
+      width: 0%;
+    }
+
+    /* ─── Question Card ───────────────────────────────────────── */
+    .q-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 0.6rem;
+    }
+    .q-prompt {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+    .q-text {
+      font-size: clamp(1.3rem, 4vw, 1.75rem);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+    .q-text.number {
+      font-family: 'Courier New', monospace;
+      font-size: clamp(1.9rem, 6vw, 2.8rem);
+      color: var(--primary);
+      letter-spacing: 0.02em;
+    }
+    .level-pill {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.15rem 0.55rem;
+      border-radius: 99px;
+      vertical-align: middle;
+      margin-left: 0.5rem;
+    }
+    .lvl-A   { background: rgba(47,207,122,0.15); color: #2fcf7a; border: 1px solid rgba(47,207,122,0.4); }
+    .lvl-AA  { background: rgba(124,111,255,0.15); color: #a89fff; border: 1px solid rgba(124,111,255,0.4); }
+    .lvl-AAA { background: rgba(242,92,154,0.15); color: #f25c9a; border: 1px solid rgba(242,92,154,0.4); }
+
+    /* ─── Options Grid ────────────────────────────────────────── */
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+      width: 100%;
+    }
+    @media (max-width: 500px) { .options-grid { grid-template-columns: 1fr; } }
+
+    /* ─── Option Button ───────────────────────────────────────── */
+    .opt-btn {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem 1.1rem;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+      line-height: 1.35;
+      transition: border-color 0.2s var(--ease), background 0.2s var(--ease), transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+    }
+    .opt-letter {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      min-width: 26px;
+      border-radius: 7px;
+      background: var(--border);
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      transition: background 0.2s var(--ease), color 0.2s var(--ease);
+      flex-shrink: 0;
+    }
+    .opt-btn:hover:not(:disabled) {
+      border-color: var(--primary);
+      background: rgba(124,111,255,0.08);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(124,111,255,0.15);
+    }
+    .opt-btn:hover:not(:disabled) .opt-letter {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* Correct state */
+    .opt-btn.correct {
+      border-color: var(--success);
+      background: var(--success-bg);
+      animation: pulseCorrect 0.55s var(--ease);
+    }
+    .opt-btn.correct .opt-letter {
+      background: var(--success);
+      color: #fff;
+    }
+
+    /* Wrong state */
+    .opt-btn.wrong {
+      border-color: var(--error);
+      background: var(--error-bg);
+      animation: shake 0.5s var(--ease);
+    }
+    .opt-btn.wrong .opt-letter {
+      background: var(--error);
+      color: #fff;
+    }
+
+    /* Dimmed unchosen */
+    .opt-btn.dimmed { opacity: 0.35; }
+
+    .opt-btn:disabled { cursor: default; }
+
+    @keyframes pulseCorrect {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(1.04); }
+      65%  { transform: scale(0.98); }
+      100% { transform: scale(1); }
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      18%     { transform: translateX(-9px); }
+      36%     { transform: translateX(9px); }
+      54%     { transform: translateX(-5px); }
+      72%     { transform: translateX(5px); }
+    }
+
+    /* ─── Keyboard shortcut hint ──────────────────────────────── */
+    .kbd-hint {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-align: center;
+      width: 100%;
+    }
+    .kbd {
+      display: inline-block;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 0.1rem 0.4rem;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    /* ─── Feedback Box ────────────────────────────────────────── */
+    .feedback {
+      width: 100%;
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      display: none;
+      align-items: flex-start;
+      gap: 0.75rem;
+      animation: slideDown 0.3s var(--ease);
+    }
+    .feedback.show { display: flex; }
+    .feedback.ok  { background: var(--success-bg); border: 1px solid var(--success-border); }
+    .feedback.bad { background: var(--error-bg);   border: 1px solid var(--error-border); }
+
+    .fb-icon { font-size: 1.4rem; line-height: 1; flex-shrink: 0; margin-top: 0.05rem; }
+    .fb-body { flex: 1; }
+    .fb-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+    .feedback.ok  .fb-title { color: var(--success); }
+    .feedback.bad .fb-title { color: var(--error); }
+    .fb-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+    .fb-ref {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin-top: 0.3rem;
+      font-style: italic;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Buttons ─────────────────────────────────────────────── */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      border: none;
+      border-radius: 11px;
+      padding: 0.85rem 2rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      box-shadow: 0 4px 18px var(--primary-glow);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px var(--primary-glow); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 0.75rem 1.5rem;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s var(--ease), color 0.2s var(--ease), background 0.2s var(--ease);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .btn-ghost:hover { border-color: var(--primary); color: var(--text); background: rgba(124,111,255,0.07); }
+
+    .btn-quit {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.45rem 0.9rem;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+    .btn-quit:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: var(--error-bg);
+    }
+
+    .next-row {
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
+    }
+
+    /* ─── Results Screen ──────────────────────────────────────── */
+    .results-card { text-align: center; }
+
+    .result-emoji {
+      font-size: 4.5rem;
+      line-height: 1;
+      display: block;
+      margin-bottom: 0.75rem;
+      animation: bounceIn 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes bounceIn {
+      0%   { transform: scale(0); opacity: 0; }
+      60%  { transform: scale(1.22); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+
+    .result-title { font-size: 1.75rem; font-weight: 900; margin-bottom: 0.35rem; }
+    .result-sub   { color: var(--text-muted); margin-bottom: 1.75rem; }
+
+    .score-big {
+      font-size: 4.5rem;
+      font-weight: 900;
+      line-height: 1;
+      background: linear-gradient(135deg, #c4b8ff, #7c6fff, #f25c9a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.2rem;
+    }
+    .score-sub { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.75rem; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.7rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 380px) { .stats-grid { grid-template-columns: 1fr; } }
+
+    .stat-box {
+      background: rgba(124,111,255,0.07);
+      border: 1px solid rgba(124,111,255,0.15);
+      border-radius: 12px;
+      padding: 0.9rem;
+    }
+    .stat-val  { font-size: 1.6rem; font-weight: 900; display: block; }
+    .stat-val.g { color: var(--success); }
+    .stat-val.r { color: var(--error); }
+    .stat-val.b { color: var(--primary); }
+    .stat-lbl  { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    .results-actions { display: flex; gap: 0.7rem; justify-content: center; flex-wrap: wrap; }
+
+    /* ─── Confetti Canvas ─────────────────────────────────────── */
+    #confetti-canvas {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; z-index: 9999;
+    }
+
+    /* ─── Responsive Tweaks ───────────────────────────────────── */
+    @media (max-width: 400px) {
+      .card { padding: 1.25rem; }
+      .quiz-topbar { gap: 0.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Confetti canvas (visual only, aria-hidden) -->
+<canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+<!-- ARIA live region for score / feedback announcements (WCAG 4.1.3) -->
+<div id="live-region" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+
+<!-- ================================================================
+     SCREEN 1 — MODE SELECTION
+================================================================ -->
+<section id="screen-mode" class="screen active" aria-label="Game mode selection">
+
+  <div class="hero">
+    <div class="hero-badge" aria-hidden="true">♿ Accessibility Quiz</div>
+    <h1 class="hero-title">WCAG 2.2 Quiz</h1>
+    <p class="hero-sub">50 success criteria · Level A, AA &amp; AAA · Test your a11y knowledge!</p>
+  </div>
+
+  <div class="instructions" role="note" aria-label="How to play">
+    <strong>How to play:</strong> Pick a game mode, then answer multiple-choice questions about WCAG 2.2 success criteria.
+    Press <kbd>A</kbd>–<kbd>D</kbd> or <kbd>1</kbd>–<kbd>4</kbd> to select options quickly. No time limit — take your time! 🧠
+  </div>
+
+  <div role="group" aria-labelledby="mode-heading">
+    <h2 id="mode-heading" class="sr-only">Choose a game mode</h2>
+    <div class="mode-grid">
+
+      <button class="mode-card" id="btn-mode1" aria-describedby="desc-mode1">
+        <span class="mode-icon" aria-hidden="true">🔢</span>
+        <span class="mode-title">Number → Title</span>
+        <span id="desc-mode1" class="mode-desc">
+          See a criterion number like <strong>1.4.3</strong> and pick its correct title from 4 options.
+        </span>
+        <span class="mode-tag">Mode 1</span>
+      </button>
+
+      <button class="mode-card" id="btn-mode2" aria-describedby="desc-mode2">
+        <span class="mode-icon" aria-hidden="true">🔤</span>
+        <span class="mode-title">Title → Number</span>
+        <span id="desc-mode2" class="mode-desc">
+          See a title like <strong>"Contrast (Minimum)"</strong> and pick the correct SC number from 4 options.
+        </span>
+        <span class="mode-tag">Mode 2</span>
+      </button>
+
+    </div>
+  </div>
+
+  <fieldset class="count-fieldset">
+    <legend class="count-legend">Number of questions</legend>
+    <div class="count-row" role="group" aria-label="Select number of questions">
+      <button class="count-btn" data-qty="10" aria-pressed="true">10</button>
+      <button class="count-btn" data-qty="20" aria-pressed="false">20</button>
+      <button class="count-btn" data-qty="30" aria-pressed="false">30</button>
+      <button class="count-btn" data-qty="50" aria-pressed="false">All 50</button>
+    </div>
+  </fieldset>
+
+</section><!-- /screen-mode -->
+
+<!-- ================================================================
+     SCREEN 2 — QUIZ
+================================================================ -->
+<section id="screen-quiz" class="screen" aria-label="Quiz" aria-live="off">
+
+  <!-- Top bar: quit / mode chip / score / streak -->
+  <div class="quiz-topbar">
+    <button class="btn-quit" id="btn-quit" aria-label="Quit quiz and return to mode selection">✕ Quit</button>
+    <span class="mode-chip" id="mode-chip" aria-label="Current game mode"></span>
+    <span class="streak-chip" id="streak-chip" aria-label="Current streak" role="status"></span>
+    <div class="score-chip" role="status" aria-label="Current score">
+      Score: <span class="val" id="score-now">0</span>/<span id="score-denom">0</span>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-wrap">
+    <div class="progress-meta">
+      <span id="prog-label">Question 1 of 10</span>
+      <span id="prog-pct">0%</span>
+    </div>
+    <div class="progress-track"
+         role="progressbar"
+         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+         aria-label="Quiz progress"
+         id="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- Question card -->
+  <article class="card" aria-labelledby="q-heading">
+    <p class="q-label" id="q-label">Question</p>
+    <p class="q-prompt" id="q-prompt"></p>
+    <h2 class="q-text" id="q-heading" aria-live="polite"></h2>
+  </article>
+
+  <!-- Answer options -->
+  <div class="options-grid"
+       id="options-grid"
+       role="group"
+       aria-labelledby="q-heading">
+    <!-- Dynamically injected -->
+  </div>
+
+  <!-- Keyboard shortcut hint -->
+  <p class="kbd-hint" aria-hidden="true">
+    Press <kbd class="kbd">A</kbd> <kbd class="kbd">B</kbd> <kbd class="kbd">C</kbd> <kbd class="kbd">D</kbd>
+    or <kbd class="kbd">1</kbd>–<kbd class="kbd">4</kbd> to answer
+  </p>
+
+  <!-- Feedback -->
+  <div class="feedback" id="feedback" role="alert" aria-live="assertive">
+    <span class="fb-icon" id="fb-icon" aria-hidden="true"></span>
+    <div class="fb-body">
+      <p class="fb-title" id="fb-title"></p>
+      <p class="fb-desc"  id="fb-desc"></p>
+      <p class="fb-ref"   id="fb-ref"></p>
+    </div>
+  </div>
+
+  <!-- Next button -->
+  <div class="next-row">
+    <button class="btn-primary" id="btn-next" style="display:none" aria-label="Go to next question">
+      Next <span aria-hidden="true">→</span>
+    </button>
+  </div>
+
+</section><!-- /screen-quiz -->
+
+<!-- ================================================================
+     SCREEN 3 — RESULTS
+================================================================ -->
+<section id="screen-results" class="screen" aria-label="Quiz results">
+  <div class="card results-card">
+    <span class="result-emoji" id="r-emoji" aria-hidden="true">🏆</span>
+    <h2 class="result-title" id="r-title">Quiz Complete!</h2>
+    <p class="result-sub"   id="r-sub">Here's how you did:</p>
+
+    <p class="score-big" id="r-pct"  aria-label="Score percentage"></p>
+    <p class="score-sub" id="r-lbl"></p>
+
+    <div class="stats-grid" aria-label="Quiz statistics">
+      <div class="stat-box">
+        <span class="stat-val g" id="s-correct">0</span>
+        <span class="stat-lbl">Correct ✓</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-val r" id="s-wrong">0</span>
+        <span class="stat-lbl">Wrong ✗</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-val b" id="s-total">0</span>
+        <span class="stat-lbl">Total</span>
+      </div>
+    </div>
+
+    <div class="results-actions">
+      <button class="btn-primary" id="btn-replay"
+              aria-label="Play again with the same settings">
+        🔄 Play Again
+      </button>
+      <button class="btn-ghost" id="btn-new-mode"
+              aria-label="Return to mode selection and choose different settings">
+        🎮 Change Mode
+      </button>
+    </div>
+  </div>
+</section><!-- /screen-results -->
+
+<script>
+/* ================================================================
+   DATA — All 50 WCAG 2.2 Success Criteria
+================================================================ */
+const CRITERIA = [
+  { n:"1.1.1",  t:"Non-text Content",                           lv:"A",
+    d:"All non-text content presented to the user has a text alternative serving the equivalent purpose (with exceptions for controls, time-based media, tests, sensory content, CAPTCHA, and decoration)." },
+  { n:"1.2.1",  t:"Audio-only and Video-only (Prerecorded)",    lv:"A",
+    d:"For prerecorded audio-only or video-only media, a text transcript (audio-only) or text/audio alternative (video-only) is provided, unless the media is a text alternative itself." },
+  { n:"1.2.2",  t:"Captions (Prerecorded)",                     lv:"A",
+    d:"Captions are provided for all prerecorded audio content in synchronized media, except when it is a media alternative for text and clearly labeled as such." },
+  { n:"1.2.3",  t:"Audio Description or Media Alternative (Prerecorded)", lv:"A",
+    d:"An alternative for time-based media or audio description of the prerecorded video content is provided for synchronized media, unless the media is a text alternative clearly labeled as such." },
+  { n:"1.2.4",  t:"Captions (Live)",                            lv:"AA",
+    d:"Captions are provided for all live audio content in synchronized media." },
+  { n:"1.2.5",  t:"Audio Description (Prerecorded)",            lv:"AA",
+    d:"Audio description is provided for all prerecorded video content in synchronized media." },
+  { n:"1.2.6",  t:"Sign Language (Prerecorded)",                lv:"AAA",
+    d:"Sign language interpretation is provided for all prerecorded audio content in synchronized media." },
+  { n:"1.2.7",  t:"Extended Audio Description (Prerecorded)",   lv:"AAA",
+    d:"Where pauses in foreground audio are insufficient to allow audio descriptions to convey the sense of the video, extended audio description is provided for all prerecorded video content." },
+  { n:"1.2.8",  t:"Media Alternative (Prerecorded)",            lv:"AAA",
+    d:"An alternative for time-based media is provided for all prerecorded synchronized media and for all prerecorded video-only media." },
+  { n:"1.2.9",  t:"Audio-only (Live)",                          lv:"AAA",
+    d:"An alternative for time-based media that presents equivalent information for live audio-only content is provided." },
+  { n:"1.3.1",  t:"Info and Relationships",                     lv:"A",
+    d:"Information, structure, and relationships conveyed through presentation can be programmatically determined or are available in text." },
+  { n:"1.3.2",  t:"Meaningful Sequence",                        lv:"A",
+    d:"If the sequence in which content is presented affects its meaning, a correct reading sequence can be programmatically determined." },
+  { n:"1.3.3",  t:"Sensory Characteristics",                    lv:"A",
+    d:"Instructions for understanding and operating content do not rely solely on sensory characteristics such as shape, color, size, visual location, orientation, or sound." },
+  { n:"1.3.4",  t:"Orientation",                                lv:"AA",
+    d:"Content does not restrict its view and operation to a single display orientation (portrait or landscape), unless a specific orientation is essential." },
+  { n:"1.3.5",  t:"Identify Input Purpose",                     lv:"AA",
+    d:"The purpose of each input field that collects information about the user can be programmatically determined, allowing user agents to autofill or present custom icons." },
+  { n:"1.3.6",  t:"Identify Purpose",                           lv:"AAA",
+    d:"In content implemented using markup languages, the purpose of user interface components, icons, and regions can be programmatically determined." },
+  { n:"1.4.1",  t:"Use of Color",                               lv:"A",
+    d:"Color is not used as the only visual means of conveying information, indicating an action, prompting a response, or distinguishing a visual element." },
+  { n:"1.4.2",  t:"Audio Control",                              lv:"A",
+    d:"If any audio plays automatically for more than 3 seconds, a mechanism is available to pause or stop it, or to control audio volume independently from the overall system volume." },
+  { n:"1.4.3",  t:"Contrast (Minimum)",                         lv:"AA",
+    d:"Text and images of text have a contrast ratio of at least 4.5:1 (or 3:1 for large text). Incidental text and logotypes are exempt." },
+  { n:"1.4.4",  t:"Resize Text",                                lv:"AA",
+    d:"Text can be resized without assistive technology up to 200% without loss of content or functionality (except for captions and images of text)." },
+  { n:"1.4.5",  t:"Images of Text",                             lv:"AA",
+    d:"If the same visual presentation can be made using text alone, images of text are not used to convey information (except for customizable or essential cases)." },
+  { n:"2.1.1",  t:"Keyboard",                                   lv:"A",
+    d:"All functionality is operable through a keyboard interface without requiring specific timings for individual keystrokes, except where the underlying function requires path-dependent input." },
+  { n:"2.1.2",  t:"No Keyboard Trap",                           lv:"A",
+    d:"Keyboard focus can be moved away from any component using standard keys. If non-standard keys are needed, the user is informed of the method." },
+  { n:"2.1.3",  t:"Keyboard (No Exception)",                    lv:"AAA",
+    d:"All functionality is operable through a keyboard interface without requiring specific timings for individual keystrokes (no exceptions)." },
+  { n:"2.1.4",  t:"Character Key Shortcuts",                    lv:"A",
+    d:"If a single-character key shortcut is implemented, the user can turn it off, remap it to include a modifier key, or it is only active when the relevant component has focus." },
+  { n:"2.2.1",  t:"Timing Adjustable",                          lv:"A",
+    d:"For each time limit set by the content, the user can turn off, adjust, or extend the time limit (with exceptions for real-time events, essential limits, and limits over 20 hours)." },
+  { n:"2.2.2",  t:"Pause, Stop, Hide",                          lv:"A",
+    d:"A mechanism is available to pause, stop, or hide moving, blinking, scrolling, or auto-updating content that starts automatically and lasts more than 5 seconds." },
+  { n:"2.3.1",  t:"Three Flashes or Below Threshold",           lv:"A",
+    d:"Web pages do not contain anything that flashes more than three times per second, or the flash is below the general flash and red flash thresholds." },
+  { n:"2.4.1",  t:"Bypass Blocks",                              lv:"A",
+    d:"A mechanism is available to bypass blocks of content that are repeated across multiple pages (e.g., a skip navigation link)." },
+  { n:"2.4.2",  t:"Page Titled",                                lv:"A",
+    d:"Web pages have titles that describe their topic or purpose." },
+  { n:"2.4.3",  t:"Focus Order",                                lv:"A",
+    d:"If a web page can be navigated sequentially and the navigation sequence affects meaning or operation, focusable components receive focus in an order that preserves meaning and operability." },
+  { n:"2.4.4",  t:"Link Purpose (In Context)",                  lv:"A",
+    d:"The purpose of each link can be determined from the link text alone, or from the link text together with its programmatically determined context." },
+  { n:"2.4.5",  t:"Multiple Ways",                              lv:"AA",
+    d:"More than one way is available to locate a web page within a set of web pages, except where the page is the result of, or a step in, a process." },
+  { n:"2.4.6",  t:"Headings and Labels",                        lv:"AA",
+    d:"Headings and labels describe topic or purpose." },
+  { n:"2.4.7",  t:"Focus Visible",                              lv:"AA",
+    d:"Any keyboard-operable user interface has a mode of operation where the keyboard focus indicator is visible." },
+  { n:"2.5.1",  t:"Pointer Gestures",                           lv:"A",
+    d:"All functionality that uses multipoint or path-based gestures can also be operated with a single pointer without a path-based gesture (unless a path-based gesture is essential)." },
+  { n:"2.5.2",  t:"Pointer Cancellation",                       lv:"A",
+    d:"For single-pointer functionality, at least one of: no down-event, abort/undo, up reversal, or essential exception applies, preventing accidental activation." },
+  { n:"2.5.3",  t:"Label in Name",                              lv:"A",
+    d:"For user interface components with visible text labels, the accessible name contains the text that is presented visually." },
+  { n:"2.5.4",  t:"Motion Actuation",                           lv:"A",
+    d:"Functionality that can be operated by device or user motion can also be operated by UI components, and the motion response can be disabled to prevent accidental actuation." },
+  { n:"3.1.1",  t:"Language of Page",                           lv:"A",
+    d:"The default human language of each web page can be programmatically determined (e.g., using the lang attribute on the html element)." },
+  { n:"3.1.2",  t:"Language of Parts",                          lv:"AA",
+    d:"The human language of each passage or phrase in the content can be programmatically determined, except for proper names, technical terms, or indeterminate language." },
+  { n:"3.2.1",  t:"On Focus",                                   lv:"A",
+    d:"If any user interface component receives focus, it does not initiate a change of context automatically." },
+  { n:"3.2.2",  t:"On Input",                                   lv:"A",
+    d:"Changing the setting of any user interface component does not automatically cause a change of context unless the user has been advised of the behavior before using the component." },
+  { n:"3.2.3",  t:"Consistent Navigation",                      lv:"AA",
+    d:"Navigational mechanisms that are repeated on multiple web pages occur in the same relative order each time they are repeated, unless a change is initiated by the user." },
+  { n:"3.2.4",  t:"Consistent Identification",                  lv:"AA",
+    d:"Components that have the same functionality within a set of web pages are identified consistently." },
+  { n:"3.2.6",  t:"Consistent Help",                            lv:"A",
+    d:"If a web page provides one or more ways to find help (contact info, self-help, automated contact), those mechanisms appear in the same relative order compared to other page content." },
+  { n:"3.3.1",  t:"Error Identification",                       lv:"A",
+    d:"If an input error is automatically detected, the item in error is identified and the error is described to the user in text." },
+  { n:"3.3.2",  t:"Labels or Instructions",                     lv:"A",
+    d:"Labels or instructions are provided when content requires user input." },
+  { n:"3.3.3",  t:"Error Suggestion",                           lv:"AA",
+    d:"If an input error is automatically detected and suggestions for correction are known, the suggestion is provided to the user, unless doing so would jeopardize security or purpose." },
+  { n:"3.3.4",  t:"Error Prevention (Legal, Financial, Data)",  lv:"AA",
+    d:"For pages that cause legal commitments or financial transactions: submissions are reversible, user data is checked and the user can correct errors, or the user can review, confirm, and correct before finalizing." },
+  { n:"4.1.2",  t:"Name, Role, Value",                          lv:"A",
+    d:"For all user interface components, the name and role can be programmatically determined; states, properties, and values can be programmatically set; and changes are notified to user agents including assistive technologies." },
+  { n:"4.1.3",  t:"Status Messages",                            lv:"AA",
+    d:"In content implemented using markup languages, status messages can be programmatically determined through role or properties so they can be announced by assistive technologies without receiving focus." }
+];
+
+/* ================================================================
+   STATE
+================================================================ */
+let gameMode      = 1;    // 1 = number→title, 2 = title→number
+let totalQ        = 10;
+let questions     = [];   // shuffled subset
+let currentIdx    = 0;
+let score         = 0;
+let streak        = 0;
+let answered      = false;
+
+/* ================================================================
+   UTILITIES
+================================================================ */
+/* Fisher-Yates shuffle */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* Pick n random items from array */
+function pick(arr, n) { return shuffle(arr).slice(0, n); }
+
+/* Announce to screen readers via live region */
+function announce(msg) {
+  const el = document.getElementById('live-region');
+  el.textContent = '';
+  requestAnimationFrame(() => { el.textContent = msg; });
+}
+
+/* Show one screen, hide others */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.setAttribute('aria-hidden', 'true');
+  });
+  const el = document.getElementById(id);
+  el.classList.add('active');
+  el.removeAttribute('aria-hidden');
+  /* Move focus to first interactive element */
+  requestAnimationFrame(() => {
+    const first = el.querySelector('button,[href],input,[tabindex]:not([tabindex="-1"])');
+    if (first) first.focus();
+  });
+}
+
+/* ================================================================
+   QUIZ GENERATION
+================================================================ */
+function generateQuestions() {
+  questions = shuffle(CRITERIA).slice(0, Math.min(totalQ, CRITERIA.length));
+}
+
+/* Build 4 options for a question (1 correct + 3 distractors) */
+function buildOptions(q) {
+  const pool       = CRITERIA.filter(c => c.n !== q.n);
+  const distractors = pick(pool, 3);
+  return shuffle([q, ...distractors]).map((c, i) => ({
+    letter:    String.fromCharCode(65 + i),    // A B C D
+    display:   gameMode === 1 ? c.t : c.n,     // shown text
+    isCorrect: c.n === q.n,
+    criterion: c
+  }));
+}
+
+/* ================================================================
+   RENDER QUESTION
+================================================================ */
+function renderQuestion() {
+  answered = false;
+  const q   = questions[currentIdx];
+  const pct = Math.round((currentIdx / questions.length) * 100);
+
+  /* Progress */
+  document.getElementById('progress-fill').style.width  = pct + '%';
+  document.getElementById('progress-track').setAttribute('aria-valuenow', pct);
+  document.getElementById('prog-label').textContent = `Question ${currentIdx + 1} of ${questions.length}`;
+  document.getElementById('prog-pct').textContent   = pct + '%';
+
+  /* Score */
+  document.getElementById('score-now').textContent   = score;
+  document.getElementById('score-denom').textContent = questions.length;
+
+  /* Streak */
+  const streakChip = document.getElementById('streak-chip');
+  if (streak >= 2) {
+    streakChip.textContent = `🔥 ${streak} streak`;
+    streakChip.classList.add('visible');
+  } else {
+    streakChip.classList.remove('visible');
+  }
+
+  /* Question text */
+  const heading = document.getElementById('q-heading');
+  const prompt  = document.getElementById('q-prompt');
+
+  document.getElementById('q-label').textContent = `Question ${currentIdx + 1}`;
+
+  if (gameMode === 1) {
+    prompt.textContent  = 'Which title belongs to WCAG 2.2 criterion number:';
+    heading.className   = 'q-text number';
+    heading.textContent = q.n;
+  } else {
+    prompt.textContent  = 'Which SC number corresponds to the criterion titled:';
+    heading.className   = 'q-text';
+    heading.textContent = `"${q.t}"`;
+  }
+
+  /* Hide feedback + next btn */
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('btn-next').style.display = 'none';
+
+  /* Render options */
+  const grid   = document.getElementById('options-grid');
+  grid.innerHTML = '';
+  const options = buildOptions(q);
+
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.setAttribute('data-correct', opt.isCorrect ? 'true' : 'false');
+    btn.setAttribute('aria-label', `Option ${opt.letter}: ${opt.display}`);
+
+    const letterEl = document.createElement('span');
+    letterEl.className = 'opt-letter';
+    letterEl.setAttribute('aria-hidden', 'true');
+    letterEl.textContent = opt.letter;
+
+    const textEl = document.createElement('span');
+    textEl.textContent = opt.display;
+
+    btn.appendChild(letterEl);
+    btn.appendChild(textEl);
+
+    btn.addEventListener('click', () => handleAnswer(btn, opt, options, q));
+    grid.appendChild(btn);
+  });
+
+  /* Global keyboard handler */
+  document.removeEventListener('keydown', onKey);
+  document.addEventListener('keydown', onKey);
+}
+
+/* ================================================================
+   KEYBOARD SHORTCUT HANDLER (A–D / 1–4)
+================================================================ */
+function onKey(e) {
+  if (answered) return;
+  const map = { a:0, b:1, c:2, d:3, 1:0, 2:1, 3:2, 4:3 };
+  const k   = e.key.toLowerCase();
+  if (k in map) {
+    const btns = document.querySelectorAll('.opt-btn');
+    if (btns[map[k]]) btns[map[k]].click();
+  }
+  /* Enter/Space on next-btn is handled natively */
+}
+
+/* ================================================================
+   HANDLE ANSWER
+================================================================ */
+function handleAnswer(btn, opt, allOpts, q) {
+  if (answered) return;
+  answered = true;
+
+  /* Disable all options */
+  document.querySelectorAll('.opt-btn').forEach(b => { b.disabled = true; });
+
+  if (opt.isCorrect) {
+    score++;
+    streak++;
+    btn.classList.add('correct');
+    if (streak >= 2) launchConfetti(40);
+    else              launchConfetti(25);
+    showFeedback(true, q);
+    announce(`Correct! ${opt.display}. Score: ${score} out of ${questions.length}.`);
+  } else {
+    streak = 0;
+    btn.classList.add('wrong');
+    /* Reveal correct */
+    document.querySelectorAll('.opt-btn').forEach(b => {
+      if (b.getAttribute('data-correct') === 'true') {
+        b.classList.add('correct');
+      } else if (b !== btn) {
+        b.classList.add('dimmed');
+      }
+    });
+    const correctOpt = allOpts.find(o => o.isCorrect);
+    showFeedback(false, q);
+    announce(`Incorrect. The correct answer was: ${correctOpt.display}. Score: ${score} out of ${questions.length}.`);
+  }
+
+  /* Update score display */
+  document.getElementById('score-now').textContent = score;
+
+  /* Next / Finish button */
+  const nextBtn = document.getElementById('btn-next');
+  nextBtn.style.display = 'inline-flex';
+  const isLast = currentIdx >= questions.length - 1;
+  nextBtn.innerHTML   = isLast ? '🏁 See Results' : 'Next <span aria-hidden="true">→</span>';
+  nextBtn.setAttribute('aria-label', isLast ? 'View your final results' : 'Go to next question');
+  nextBtn.focus();
+}
+
+/* ================================================================
+   FEEDBACK
+================================================================ */
+const CORRECT_ICONS = ['🎉','✅','🌟','🎯','💯','🏆','🎊','✨','🔥','👏','⭐','🥳'];
+const WRONG_ICONS   = ['❌','😬','🙈','💡','🤔','😅','📖','🔍','💪'];
+const CORRECT_MSGS  = ['Brilliant!','Nailed it!','Accessibility pro!','Correct!','You got it!','Amazing!','Well done!','Perfect!','Outstanding!'];
+const WRONG_MSGS    = ['Not quite!','Almost there!','Keep learning!','Good try!','Close!','Learning moment!','Oops — here\'s the detail:'];
+
+function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function showFeedback(ok, q) {
+  const box   = document.getElementById('feedback');
+  const icon  = document.getElementById('fb-icon');
+  const title = document.getElementById('fb-title');
+  const desc  = document.getElementById('fb-desc');
+  const ref   = document.getElementById('fb-ref');
+
+  box.className   = 'feedback show ' + (ok ? 'ok' : 'bad');
+  icon.textContent  = ok ? rnd(CORRECT_ICONS) : rnd(WRONG_ICONS);
+  title.textContent = ok ? rnd(CORRECT_MSGS)  : rnd(WRONG_MSGS);
+  desc.textContent  = q.d;
+  ref.textContent   = `📚 WCAG 2.2 — SC ${q.n} "${q.t}" (Level ${q.lv})`;
+}
+
+/* ================================================================
+   RESULTS SCREEN
+================================================================ */
+function showResults() {
+  document.removeEventListener('keydown', onKey);
+  const total = questions.length;
+  const pct   = Math.round((score / total) * 100);
+
+  document.getElementById('s-correct').textContent = score;
+  document.getElementById('s-wrong').textContent   = total - score;
+  document.getElementById('s-total').textContent   = total;
+  document.getElementById('r-pct').textContent     = pct + '%';
+  document.getElementById('r-lbl').textContent     = `${score} correct out of ${total} questions`;
+  document.getElementById('r-pct').setAttribute('aria-label', `${pct} percent — ${score} out of ${total} correct`);
+
+  let emoji, title, sub;
+  if (pct === 100)      { emoji='🏆'; title='Perfect Score!';   sub='You are a WCAG master — absolutely flawless!'; }
+  else if (pct >= 80)   { emoji='🌟'; title='Excellent!';       sub='You really know your accessibility criteria!'; }
+  else if (pct >= 60)   { emoji='👍'; title='Good Job!';        sub='Solid knowledge! Keep practising to master all 50.'; }
+  else if (pct >= 40)   { emoji='📚'; title='Keep Learning!';   sub='You\'re on your way — review the WCAG docs and try again!'; }
+  else                  { emoji='💪'; title='Don\'t Give Up!';  sub='Every expert was once a beginner. You\'ve got this!'; }
+
+  document.getElementById('r-emoji').textContent = emoji;
+  document.getElementById('r-title').textContent = title;
+  document.getElementById('r-sub').textContent   = sub;
+
+  if (pct >= 60) launchConfetti(pct >= 80 ? 120 : 60);
+
+  announce(`Quiz complete! You scored ${score} out of ${total} — ${pct} percent. ${title}`);
+  showScreen('screen-results');
+}
+
+/* ================================================================
+   CONFETTI
+================================================================ */
+function launchConfetti(count) {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx    = canvas.getContext('2d');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const COLORS = ['#7c6fff','#f25c9a','#2fcf7a','#ffd166','#4fc3f7','#ef5350','#26c6da'];
+  const parts  = Array.from({ length: count }, () => ({
+    x:  Math.random() * canvas.width,
+    y:  Math.random() * canvas.height - canvas.height * 0.3,
+    w:  Math.random() * 9 + 4,
+    h:  Math.random() * 5 + 3,
+    color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    rot: Math.random() * Math.PI * 2,
+    rs:  (Math.random() - 0.5) * 0.18,
+    vy:  Math.random() * 2.5 + 1.5,
+    vx:  (Math.random() - 0.5) * 1.8,
+    op:  1
+  }));
+
+  let raf;
+  (function frame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    parts.forEach(p => {
+      p.y  += p.vy;
+      p.x  += p.vx;
+      p.rot += p.rs;
+      if (p.y > canvas.height * 0.65) p.op = Math.max(0, p.op - 0.025);
+      if (p.y < canvas.height + 20)   alive = true;
+      ctx.save();
+      ctx.globalAlpha = p.op;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    if (alive) raf = requestAnimationFrame(frame);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  })();
+}
+
+/* ================================================================
+   START GAME
+================================================================ */
+function startGame(mode) {
+  gameMode   = mode;
+  score      = 0;
+  streak     = 0;
+  currentIdx = 0;
+  generateQuestions();
+
+  document.getElementById('mode-chip').textContent =
+    mode === 1 ? '🔢 Number → Title' : '🔤 Title → Number';
+
+  showScreen('screen-quiz');
+  renderQuestion();
+  announce(`Starting ${mode === 1 ? 'Number to Title' : 'Title to Number'} quiz with ${questions.length} questions.`);
+}
+
+/* ================================================================
+   EVENT WIRING
+================================================================ */
+
+/* Mode selection */
+document.getElementById('btn-mode1').addEventListener('click', () => startGame(1));
+document.getElementById('btn-mode2').addEventListener('click', () => startGame(2));
+
+/* Question count */
+document.querySelectorAll('.count-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.count-btn').forEach(b => {
+      b.classList.remove('selected');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    btn.classList.add('selected');
+    btn.setAttribute('aria-pressed', 'true');
+    totalQ = parseInt(btn.dataset.qty, 10);
+  });
+});
+
+/* Next / Finish */
+document.getElementById('btn-next').addEventListener('click', () => {
+  document.removeEventListener('keydown', onKey);
+  if (currentIdx >= questions.length - 1) {
+    showResults();
+  } else {
+    currentIdx++;
+    renderQuestion();
+  }
+});
+
+/* Quit */
+document.getElementById('btn-quit').addEventListener('click', () => {
+  document.removeEventListener('keydown', onKey);
+  showScreen('screen-mode');
+});
+
+/* Results: replay */
+document.getElementById('btn-replay').addEventListener('click', () => startGame(gameMode));
+
+/* Results: change mode */
+document.getElementById('btn-new-mode').addEventListener('click', () => {
+  document.removeEventListener('keydown', onKey);
+  showScreen('screen-mode');
+});
+
+/* ── Boot ── */
+showScreen('screen-mode');
+</script>
+</body>
+</html>
