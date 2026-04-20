@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>♿ WCAG Quest: Accessibility Criteria Challenge</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none; /* avoid accidental text selection on double-tap, but still readable */
+    }
+
+    body {
+      background: linear-gradient(145deg, #1a2a3a 0%, #0f1a24 100%);
+      font-family: 'Segoe UI', Roboto, 'Poppins', system-ui, -apple-system, 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+    }
+
+    /* game container */
+    .game-box {
+      max-width: 1300px;
+      width: 100%;
+      background: rgba(255,255,240,0.1);
+      backdrop-filter: blur(2px);
+      border-radius: 4rem 2rem 4rem 2rem;
+      box-shadow: 0 25px 45px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.1);
+      padding: 1.5rem 1.8rem 2.2rem;
+      transition: all 0.2s;
+    }
+
+    /* header area */
+    .quiz-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 3px dashed #ffcd7e;
+      padding-bottom: 0.8rem;
+    }
+
+    h1 {
+      font-size: 1.9rem;
+      background: linear-gradient(135deg, #FFE6B0, #FFB347);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      letter-spacing: -0.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    h1 span {
+      font-size: 2rem;
+    }
+
+    .score-board {
+      background: #2c2e3a;
+      padding: 0.6rem 1.3rem;
+      border-radius: 60px;
+      font-weight: bold;
+      font-size: 1.3rem;
+      color: #f9e2a1;
+      box-shadow: inset 0 -2px 0 #5f4c2b, 0 6px 12px rgba(0,0,0,0.2);
+    }
+
+    .score-board span {
+      color: #FFD966;
+      font-size: 1.9rem;
+      margin-right: 6px;
+    }
+
+    /* stats + mode toggle */
+    .stats-panel {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      gap: 12px;
+    }
+
+    .mode-buttons {
+      display: flex;
+      gap: 12px;
+      background: #1e2b32;
+      padding: 6px 12px;
+      border-radius: 48px;
+    }
+
+    .mode-btn {
+      background: none;
+      border: none;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 8px 18px;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: 0.2s;
+      color: #d4dce4;
+      font-family: inherit;
+    }
+
+    .mode-btn.active {
+      background: #ffb347;
+      color: #1e2a2f;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .question-status {
+      background: #00000066;
+      backdrop-filter: blur(4px);
+      padding: 0.4rem 1rem;
+      border-radius: 32px;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #f0f0e0;
+    }
+
+    /* question card */
+    .question-card {
+      background: #fef9ef;
+      border-radius: 2.5rem;
+      padding: 2rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 18px 30px -8px rgba(0,0,0,0.4);
+      transition: transform 0.1s ease;
+      text-align: center;
+    }
+
+    .question-text {
+      font-size: 1.9rem;
+      font-weight: 700;
+      word-break: break-word;
+      color: #2c3e2f;
+    }
+
+    .question-sub {
+      font-size: 1rem;
+      margin-top: 12px;
+      color: #7f8c6d;
+      letter-spacing: 0.3px;
+    }
+
+    /* options grid */
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0 1.5rem;
+    }
+
+    .option-btn {
+      background: #ffffffea;
+      border: 2px solid #cddde9;
+      border-radius: 60px;
+      padding: 1rem 1rem;
+      font-size: 1rem;
+      font-weight: 500;
+      font-family: 'Courier New', 'Fira Code', monospace;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: #1f2e2a;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .option-btn:hover:not(:disabled) {
+      transform: scale(0.98);
+      background: #fff2df;
+      border-color: #f7b05e;
+      box-shadow: 0 5px 12px rgba(0,0,0,0.1);
+    }
+
+    .option-prefix {
+      background: #314351;
+      color: white;
+      border-radius: 50px;
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .feedback {
+      background: #e9eef3;
+      border-radius: 3rem;
+      padding: 1rem 1.8rem;
+      margin-top: 10px;
+      font-size: 1.1rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .next-btn {
+      background: #2d6a4f;
+      border: none;
+      padding: 12px 32px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 60px;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-top: 12px;
+      box-shadow: 0 4px 0 #1b3b2c;
+    }
+
+    .next-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #1b3b2c;
+    }
+
+    .reset-btn {
+      background: #af4c3b;
+      box-shadow: 0 4px 0 #6e2c20;
+      margin-left: 12px;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* mobile adjustments */
+    @media (max-width: 680px) {
+      .game-box {
+        padding: 1rem;
+      }
+      .question-text {
+        font-size: 1.4rem;
+      }
+      .options-grid {
+        grid-template-columns: 1fr;
+      }
+      .mode-btn {
+        padding: 5px 12px;
+        font-size: 0.8rem;
+      }
+      .option-btn {
+        padding: 0.8rem;
+      }
+    }
+
+    .correct-feedback {
+      background: #cfe9cd;
+      color: #1f5420;
+      border-left: 12px solid #3ba33b;
+    }
+    .wrong-feedback {
+      background: #ffe1de;
+      color: #a1220a;
+      border-left: 12px solid #d9534f;
+    }
+    .fun-emoji {
+      font-size: 1.5rem;
+    }
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: #cbcbad;
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-box" id="appRoot">
+  <div class="quiz-header">
+    <h1>
+      <span>♿🎮</span> WCAG ARCADE
+    </h1>
+    <div class="score-board">
+      <span>🏆</span> <span id="scoreValue">0</span> / <span id="totalCountSpan">0</span>
+    </div>
+  </div>
+
+  <div class="stats-panel">
+    <div class="mode-buttons">
+      <button class="mode-btn" data-mode="num2label">🔢 # → Label</button>
+      <button class="mode-btn" data-mode="label2num">📝 Label → #</button>
+    </div>
+    <div class="question-status" id="questionTracker">
+      🌟 Question <span id="currentIdx">1</span> / <span id="totalQ">0</span>
+    </div>
+  </div>
+
+  <!-- dynamic question area -->
+  <div class="question-card">
+    <div class="question-text" id="questionPrompt">Loading awesome quiz...</div>
+    <div class="question-sub" id="subHint"></div>
+  </div>
+
+  <div id="optionsContainer" class="options-grid"></div>
+
+  <div id="feedbackArea" class="feedback"></div>
+
+  <div style="display: flex; gap: 12px; justify-content: center; margin-top: 8px;">
+    <button id="nextButton" class="next-btn">➡️ NEXT QUESTION</button>
+    <button id="resetGameBtn" class="next-btn reset-btn">🔄 NEW GAME</button>
+  </div>
+  <footer>⚡ Match WCAG Success Criterion — each correct answer gives +1 point. Have fun!</footer>
+</div>
+
+<script>
+  // --------------------------------------------------------------
+  // MASTER DATABASE : WCAG 2.1 success criteria (selected from given list)
+  // key = criterion number (string), value = official short label / title
+  // based on user provided list (some merged for clarity)
+  // --------------------------------------------------------------
+  const CRITERIA_MAP = new Map([
+    ["1.1.1", "Non-text content"],
+    ["1.2.1", "Audio-only and Video-only (prerecorded)"],
+    ["1.2.2", "Captions (Prerecorded)"],
+    ["1.2.3", "Audio description or Media alternative"],
+    ["1.2.4", "Captions (Live)"],
+    ["1.2.5", "Audio description (Prerecorded)"],
+    ["1.2.6", "Sign language (Prerecorded)"],
+    ["1.2.7", "Extended audio description"],
+    ["1.2.8", "Media alternative (Prerecorded)"],
+    ["1.2.9", "Audio-only (Live)"],
+    ["1.3.1", "Info and relationships"],
+    ["1.3.2", "Meaningful sequence"],
+    ["1.3.3", "Sensory characteristics"],
+    ["1.3.4", "Orientation"],
+    ["1.3.5", "Identify input purpose"],
+    ["1.3.6", "Identify purpose"],
+    ["1.4.1", "Use of color"],
+    ["1.4.2", "Audio control"],
+    ["1.4.3", "Contrast (Minimum)"],
+    ["1.4.4", "Resize text"],
+    ["1.4.5", "Images of text"],
+    ["2.1.1", "Keyboard"],
+    ["2.1.2", "No keyboard trap"],
+    ["2.1.3", "Keyboard (No exception)"],
+    ["2.1.4", "Character key shortcuts"],
+    ["2.2.1", "Timing adjustable"],
+    ["2.2.2", "Pause, stop, hide"],
+    ["2.3.1", "Three flashes or below threshold"],
+    ["2.4.1", "Bypass blocks"],
+    ["2.4.2", "Page titled"],
+    ["2.4.3", "Focus order"],
+    ["2.4.4", "Link purpose (In context)"],
+    ["2.4.5", "Multiple ways"],
+    ["2.4.6", "Headings and labels"],
+    ["2.4.7", "Focus visible"],
+    ["2.5.1", "Pointer gestures"],
+    ["2.5.2", "Pointer cancellation"],
+    ["2.5.3", "Label in name"],
+    ["2.5.4", "Motion actuation"],
+    ["3.1.1", "Language of page"],
+    ["3.1.2", "Language of parts"],
+    ["3.2.1", "On focus"],
+    ["3.2.2", "On input"],
+    ["3.2.3", "Consistent navigation"],
+    ["3.2.4", "Consistent identification"],
+    ["3.2.6", "Consistent help"],
+    ["3.3.1", "Error identification"],
+    ["3.3.2", "Labels or instructions"],
+    ["3.3.3", "Error suggestion"],
+    ["3.3.4", "Error prevention (Legal, financial, data)"],
+    ["4.1.2", "Name, role, value"],
+    ["4.1.3", "Status messages"]
+  ]);
+
+  // Convert map to array of question objects
+  let allQuestionsData = [];
+  for (let [code, label] of CRITERIA_MAP.entries()) {
+    allQuestionsData.push({ number: code, label: label });
+  }
+
+  // Shuffle utility
+  function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // Game state
+  let currentMode = "num2label";   // 'num2label' (show number, guess label) OR 'label2num' (show label, guess number)
+  let currentQuestionsList = [];    // array of question objects { correctAnswer (string for display), type, ... }
+  let currentIndex = 0;
+  let score = 0;
+  let answerLock = false;           // after answering, lock until next
+  let currentQuestionObj = null;
+  let currentOptions = [];           // array of strings (possible answers)
+  let currentCorrectValue = "";      // the correct label OR number depending on mode
+
+  // DOM elements
+  const questionPromptEl = document.getElementById("questionPrompt");
+  const subHintEl = document.getElementById("subHint");
+  const optionsContainer = document.getElementById("optionsContainer");
+  const feedbackArea = document.getElementById("feedbackArea");
+  const nextBtn = document.getElementById("nextButton");
+  const resetBtn = document.getElementById("resetGameBtn");
+  const scoreSpan = document.getElementById("scoreValue");
+  const totalCountSpan = document.getElementById("totalCountSpan");
+  const currentIdxSpan = document.getElementById("currentIdx");
+  const totalQSpan = document.getElementById("totalQ");
+  const modeBtns = document.querySelectorAll(".mode-btn");
+
+  // helper update score UI
+  function updateUI() {
+    scoreSpan.innerText = score;
+    totalCountSpan.innerText = currentQuestionsList.length;
+    if (currentQuestionsList.length) {
+      totalQSpan.innerText = currentQuestionsList.length;
+      currentIdxSpan.innerText = currentIndex + 1;
+    } else {
+      currentIdxSpan.innerText = 0;
+    }
+  }
+
+  // generate random distractor answers (based on mode)
+  function generateOptions(correctAnswer, fullSet, mode, excludeKey) {
+    // correctAnswer: string (label or criterion number)
+    // fullSet: allQuestionsData (original)
+    // mode: 'num2label' means correctAnswer is a label; we need to pick other labels
+    // mode: 'label2num' means correctAnswer is a number; pick other numbers
+    let possiblePool = [];
+    if (mode === "num2label") {
+      // correct is label, we need other distinct labels
+      possiblePool = fullSet.map(item => item.label).filter(lbl => lbl !== correctAnswer);
+    } else {
+      // label2num: correct is number string, pick other numbers
+      possiblePool = fullSet.map(item => item.number).filter(num => num !== correctAnswer);
+    }
+    // remove duplicates (labels are unique already, numbers unique)
+    let uniquePool = [...new Set(possiblePool)];
+    if (uniquePool.length < 3) {
+      // fallback: add dummy if super small? but we have >50 items
+      while(uniquePool.length < 3) uniquePool.push(mode === "num2label" ? "Alternative text" : "9.9.9");
+    }
+    let shuffledPool = shuffleArray([...uniquePool]);
+    let dists = shuffledPool.slice(0, 3);
+    let options = [correctAnswer, ...dists];
+    return shuffleArray(options);
+  }
+
+  // prepare current question from currentQuestionsList
+  function loadQuestion() {
+    if (currentIndex >= currentQuestionsList.length) {
+      // game finished
+      questionPromptEl.innerHTML = "✨ GAME COMPLETE! ✨<br>You mastered WCAG! 🎉";
+      subHintEl.innerHTML = "Click NEW GAME to replay or change mode.";
+      optionsContainer.innerHTML = "";
+      feedbackArea.innerHTML = "🏁 Congratulations! Perfect score spirit! 🧠♿";
+      nextBtn.disabled = true;
+      return;
+    }
+    answerLock = false;
+    nextBtn.disabled = false;
+    const qData = currentQuestionsList[currentIndex];
+    // based on currentMode we build prompt & correct answer string
+    if (currentMode === "num2label") {
+      // show criterion number, ask for label
+      const criterionNumber = qData.number;
+      const correctLabel = qData.label;
+      currentCorrectValue = correctLabel;
+      questionPromptEl.innerHTML = `🎯 <strong>${criterionNumber}</strong> <span style="font-size:1.4rem">➜ ?</span>`;
+      subHintEl.innerHTML = `📌 Which success criterion title matches <strong>${criterionNumber}</strong> ?`;
+      // generate options: labels
+      const optionsArray = generateOptions(correctLabel, allQuestionsData, "num2label", criterionNumber);
+      currentOptions = optionsArray;
+      renderOptions(optionsArray);
+    } 
+    else { // label2num mode
+      const criterionLabel = qData.label;
+      const correctNumber = qData.number;
+      currentCorrectValue = correctNumber;
+      questionPromptEl.innerHTML = `📖 <strong>“${criterionLabel}”</strong> <span style="font-size:1.4rem">➜ ?</span>`;
+      subHintEl.innerHTML = `🔢 Which success criterion number corresponds to the label above?`;
+      const optionsArray = generateOptions(correctNumber, allQuestionsData, "label2num", criterionLabel);
+      currentOptions = optionsArray;
+      renderOptions(optionsArray);
+    }
+    // clear feedback area for new question
+    feedbackArea.innerHTML = "🤔 Choose an answer and test your WCAG knowledge!";
+    feedbackArea.className = "feedback";
+  }
+
+  function renderOptions(optionsArr) {
+    optionsContainer.innerHTML = "";
+    const alphabet = ["A", "B", "C", "D"];
+    optionsArr.forEach((opt, idx) => {
+      const btn = document.createElement("button");
+      btn.className = "option-btn";
+      btn.setAttribute("data-value", opt);
+      const prefixSpan = document.createElement("span");
+      prefixSpan.className = "option-prefix";
+      prefixSpan.innerText = alphabet[idx] || String(idx+1);
+      const textSpan = document.createElement("span");
+      textSpan.style.flex = "1";
+      textSpan.innerText = opt;
+      btn.appendChild(prefixSpan);
+      btn.appendChild(textSpan);
+      btn.addEventListener("click", (e) => {
+        if (answerLock) {
+          feedbackArea.innerHTML = "⏳ Already answered! Press NEXT ➡️";
+          return;
+        }
+        handleAnswer(opt);
+      });
+      optionsContainer.appendChild(btn);
+    });
+  }
+
+  function handleAnswer(selected) {
+    if (answerLock) return;
+    const isCorrect = (selected === currentCorrectValue);
+    if (isCorrect) {
+      score++;
+      updateUI();
+      feedbackArea.innerHTML = `<span class="fun-emoji">🎉✅ CORRECT! 🎉</span> +1 point! “${currentCorrectValue}” is spot on!`;
+      feedbackArea.className = "feedback correct-feedback";
+    } else {
+      feedbackArea.innerHTML = `<span class="fun-emoji">😵❌ OOPS!</span> Wrong answer. Correct was: <strong>${currentCorrectValue}</strong>. Keep learning! 📘`;
+      feedbackArea.className = "feedback wrong-feedback";
+    }
+    answerLock = true;
+    // disable all option buttons visually
+    const allOptBtns = document.querySelectorAll(".option-btn");
+    allOptBtns.forEach(btn => {
+      btn.disabled = true;
+      if (btn.getAttribute("data-value") === currentCorrectValue) {
+        btn.style.border = "3px solid #2e7d32";
+        btn.style.background = "#e0f2e9";
+      } else if (btn.getAttribute("data-value") === selected && selected !== currentCorrectValue) {
+        btn.style.border = "3px solid #c7362b";
+        btn.style.background = "#ffe0db";
+      }
+    });
+  }
+
+  // generate a fresh quiz order based on currentMode (but we reuse same questions shuffled)
+  function generateFreshDeck() {
+    // clone allQuestionsData and shuffle for variety each new game / mode switch
+    let shuffledDeck = shuffleArray([...allQuestionsData]);
+    // limit to a max of 20 questions for snappy fun? but we can keep all, it's okay (50+ questions)
+    // However all 53 is still nice but longer. Keep all but to avoid overwhelming, we keep full list, but user can reset.
+    // we keep FULL but it's interactive.
+    currentQuestionsList = [...shuffledDeck];
+    currentIndex = 0;
+    score = 0;
+    answerLock = false;
+    updateUI();
+    if (currentQuestionsList.length) {
+      loadQuestion();
+    } else {
+      // fallback (never)
+      currentQuestionsList = [...allQuestionsData];
+      loadQuestion();
+    }
+  }
+
+  // reset game (keep mode)
+  function resetGame() {
+    generateFreshDeck();
+  }
+
+  // switch mode & reset fully
+  function setMode(mode) {
+    if (mode === currentMode && currentQuestionsList.length > 0) {
+      // optional: just reset game anyway but keep mode same
+      resetGame();
+      return;
+    }
+    currentMode = mode;
+    // update active button style
+    modeBtns.forEach(btn => {
+      if (btn.getAttribute("data-mode") === mode) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+    // reshuffle deck for new mode
+    generateFreshDeck();
+  }
+
+  // next question
+  function nextQuestion() {
+    if (!answerLock && currentIndex < currentQuestionsList.length) {
+      // If no answer given yet, provide gentle reminder
+      feedbackArea.innerHTML = "📢 Please select an answer before moving on!";
+      feedbackArea.className = "feedback wrong-feedback";
+      return;
+    }
+    if (currentIndex + 1 <= currentQuestionsList.length) {
+      currentIndex++;
+      if (currentIndex < currentQuestionsList.length) {
+        updateUI();
+        loadQuestion();
+      } else {
+        // game finished scenario
+        updateUI();
+        if (currentIndex === currentQuestionsList.length) {
+          loadQuestion(); // this will show completion message
+          nextBtn.disabled = true;
+        } else {
+          loadQuestion();
+        }
+      }
+    } else {
+      // already finished, reset needed
+      feedbackArea.innerHTML = "Game finished! Press NEW GAME to replay.";
+    }
+  }
+
+  // event binding
+  nextBtn.addEventListener("click", nextQuestion);
+  resetBtn.addEventListener("click", () => {
+    resetGame();
+  });
+  modeBtns.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const modeVal = btn.getAttribute("data-mode");
+      if (modeVal === "num2label") setMode("num2label");
+      else if (modeVal === "label2num") setMode("label2num");
+    });
+  });
+
+  // INITIALIZE
+  function init() {
+    // initial mode = num2label active
+    document.querySelector('.mode-btn[data-mode="num2label"]').classList.add("active");
+    currentMode = "num2label";
+    generateFreshDeck();
+  }
+
+  init();
+</script>
+</body>
+</html>
